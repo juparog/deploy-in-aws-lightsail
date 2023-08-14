@@ -8,7 +8,7 @@ on:
       - closed
 
 env:
-  APP_DEPLOY_PATH: /home/ubuntu/app # Ruta en donde se desplegara la aplicación en su instancia de Lightsail (esta se creara mas adelante)
+  APP_DEPLOY_PATH: /home/ec2-user/app # Ruta en donde se desplegara la aplicación en su instancia de Lightsail (esta se creara mas adelante)
 
 jobs:
   build:
@@ -31,24 +31,32 @@ jobs:
     - name: 🏗️ Build Application # Compilar la aplicación
       run: npm run build
 
+    - name: 🚧 Replace Tokens # remplazar lostokens #{...}# del archivo ecosisten popr valores reales
+      uses: cschleiden/replace-tokens@v1
+      with:
+        files: '["ecosystem.config.js"]'
+      env:
+        HOST: ${{ vars.HOST }}
+        PORT: ${{ vars.PORT }}
+
     - name: 📦 Package App # Empaquetar el compilado en un zip
       run: zip -r app.zip dist
 
     - name: 🚚 Transfer App to Lightsail # transferir el archivo empaquetado a nuestra    instancia de Lightsail
-      uses: garygrossgarten/github-action-scp@release
+      uses: appleboy/scp-action@v0.1.4
       with:
-        local: ./app.zip
-        remote: ${{ env.APP_DEPLOY_PATH }}/app-dist.zip
         host: ${{ secrets.SSH_IP }}
         username: ${{ secrets.SSH_USER }}
-        privateKey: ${{ secrets.SSH_PRIVATE_KEY}}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        source: "./app.zip"
+        target: ${{ env.APP_DEPLOY_PATH }}/
 
     - name: 📂 Unzip App # Conectarse a la instancia de Lightsail y descomprimir la aplicación
       uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.SSH_IP }}
         username: ${{ secrets.SSH_USER }}
-        key: ${{ secrets.SSH_PRIVATE_KEY}}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
           unzip -o ${{ env.APP_DEPLOY_PATH }}/app.zip -d /${{ env.APP_DEPLOY_PATH }}/
           ls -l
@@ -58,7 +66,7 @@ jobs:
       with:
         host: ${{ secrets.SSH_IP }}
         username: ${{ secrets.SSH_USER }}
-        key: ${{ secrets.SSH_PRIVATE_KEY}}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
           cd ${{ env.APP_DEPLOY_PATH }}/dist
           pm2 stop ./ecosystem.config.js
