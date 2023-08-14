@@ -6,9 +6,6 @@ on:
   pull_request:
     types:
       - closed
-  push:
-    branches:
-      - feature/*
 
 env:
   APP_DEPLOY_PATH: /home/ec2-user/app # Ruta en donde se desplegara la aplicación en su instancia de Lightsail (esta se creara mas adelante)
@@ -33,6 +30,14 @@ jobs:
 
     - name: 🏗️ Build Application # Compilar la aplicación
       run: npm run build
+
+    - name: 🚧 Replace Tokens # remplazar lostokens #{...}# del archivo ecosisten popr valores reales
+      uses: cschleiden/replace-tokens@v1
+      with:
+        files: '["ecosystem.config.js"]'
+      env:
+        HOST: ${{ vars.HOST }}
+        PORT: ${{ vars.PORT }}
 
     - name: 📦 Package App # Empaquetar el compilado en un zip
       run: zip -r app.zip dist
