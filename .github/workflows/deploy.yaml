@@ -37,23 +37,14 @@ jobs:
     - name: 📦 Package App # Empaquetar el compilado en un zip
       run: zip -r app.zip dist
 
-    # - name: 🚚 Transfer App to Lightsail # transferir el archivo empaquetado a nuestra    instancia de Lightsail
-    #   uses: garygrossgarten/github-action-scp@release
-    #   with:
-    #     local: ./app.zip
-    #     remote: ${{ env.APP_DEPLOY_PATH }}/app.zip
-    #     host: ${{ secrets.SSH_IP }}
-    #     username: ${{ secrets.SSH_USER }}
-    #     privateKey: ${{ secrets.SSH_PRIVATE_KEY }}
-
-    - name: 🚚 Transfer App to Lightsail
+    - name: 🚚 Transfer App to Lightsail # transferir el archivo empaquetado a nuestra    instancia de Lightsail
       uses: appleboy/scp-action@v0.1.4
       with:
         host: ${{ secrets.SSH_IP }}
         username: ${{ secrets.SSH_USER }}
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         source: "./app.zip"
-        target: ${{ env.APP_DEPLOY_PATH }}/app.zip
+        target: ${{ env.APP_DEPLOY_PATH }}/
 
     - name: 📂 Unzip App # Conectarse a la instancia de Lightsail y descomprimir la aplicación
       uses: appleboy/ssh-action@v1.0.0
