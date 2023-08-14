@@ -70,5 +70,5 @@ jobs:
         script: |
           cd ${{ env.APP_DEPLOY_PATH }}/dist
           pm2 stop ./ecosystem.config.js
-          yarn
+          npm install
           pm2 start ./ecosystem.config.js
