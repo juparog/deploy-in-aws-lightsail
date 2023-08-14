@@ -1,0 +1,66 @@
+name: 🚀 Build and Deploy
+
+# Activar el flujo solo cuando se cierre un pull request
+# Ajuste según sus necesidades
+on:
+  pull_request:
+    types:
+      - closed
+
+env:
+  APP_DEPLOY_PATH: /home/ubuntu/app # Ruta en donde se desplegara la aplicación en su instancia de Lightsail (esta se creara mas adelante)
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 🛒 Checkout Repository # Clonar los recursos del repo en el agente donde se ejecuta el pipeline
+      uses: actions/checkout@v2
+
+    - name: 📦 Set up Node.js # Instalar nodejs version 18
+      uses: actions/setup-node@v2
+      with:
+        node-version: 18
+
+    - name: 📥 Install Dependencies # Instalar las dependencias de la aplicación
+      run: npm install
+
+    # Podría agregar aquí algunas tareas que ejecuten pruebas y análisis de código estático
+
+    - name: 🏗️ Build Application # Compilar la aplicación
+      run: npm run build
+
+    - name: 📦 Package App # Empaquetar el compilado en un zip
+      run: zip -r app.zip dist
+
+    - name: 🚚 Transfer App to Lightsail # transferir el archivo empaquetado a nuestra    instancia de Lightsail
+      uses: garygrossgarten/github-action-scp@release
+      with:
+        local: ./app.zip
+        remote: ${{ env.APP_DEPLOY_PATH }}/app-dist.zip
+        host: ${{ secrets.SSH_IP }}
+        username: ${{ secrets.SSH_USER }}
+        privateKey: ${{ secrets.SSH_PRIVATE_KEY}}
+
+    - name: 📂 Unzip App # Conectarse a la instancia de Lightsail y descomprimir la aplicación
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.SSH_IP }}
+        username: ${{ secrets.SSH_USER }}
+        key: ${{ secrets.SSH_PRIVATE_KEY}}
+        script: |
+          unzip -o ${{ env.APP_DEPLOY_PATH }}/app.zip -d /${{ env.APP_DEPLOY_PATH }}/
+          ls -l
+
+    - name: 🚀 Deploy App # Desplegar la aplicación, bello bello
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.SSH_IP }}
+        username: ${{ secrets.SSH_USER }}
+        key: ${{ secrets.SSH_PRIVATE_KEY}}
+        script: |
+          cd ${{ env.APP_DEPLOY_PATH }}/dist
+          pm2 stop ./ecosystem.config.js
+          yarn
+          pm2 start ./ecosystem.config.js
